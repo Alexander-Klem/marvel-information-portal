@@ -2,6 +2,7 @@
 
 .app {
     &__banner {
+        position: relative;
         width: 100%;
         background-color: $dark;
         height: 100px;
@@ -15,6 +16,14 @@
             color: #FFFFFF;
             padding-left: 83px;
             padding-top: 18px;
+        }
+        &-logo-1{
+            width: 155px;
+            height: 100px;
+        }
+        &-logo-2{
+            width: 133px;
+            height: 100px;
         }
     }
 }

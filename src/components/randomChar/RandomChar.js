@@ -1,61 +1,37 @@
-import { Component } from 'react';
+import { useState, useEffect } from 'react';
 
-import MarvelService from '../../services/MarvelService';
+import useMarvelService from '../../services/MarvelService';
 import Spinner from '../spinner/Spinner';
 import ErrorMessage from '../errorMessage/ErrorMessage';
 
 import './randomChar.scss';
 import mjolnir from '../../resources/img/mjolnir.png';
 
-class RandomChar extends Component {
+const RandomChar = () => { 
  
-    state = {
-        character: {},
-        loading: true,
-        error: false
+    const [character, setCharacter] = useState({});
+
+    const {loading, error, getCharacter, clearError} = useMarvelService();
+
+    useEffect(() => { 
+        updateCharacter();
+        const timerID = setInterval(updateCharacter, 10000)
+        return () => { 
+            clearInterval(timerID);
+        }
+    }, [])
+ 
+    const onCharacterLoaded = (character) => { 
+        setCharacter(character);
     }
 
-    marvelService = new MarvelService();
-
-    componentDidMount() { 
-        this.updateCharacter();
-        // this.timerID = setInterval(this.updateCharacter, 3000)
-    }
-
-    componentWillUnmount() { 
-        clearInterval(this.timerID);
-    }
-
-    onCharacterLoaded = (character) => { 
-        this.setState({
-            character,
-            loading: false,
-        })
-    }
-
-    onCharacterLoading = () => { 
-        this.setState({
-            loading: true,
-        })
-    }
-
-    onError = () => {
-        this.setState({
-            loading: false,
-            error: true
-        })
-    }
-
-    updateCharacter = () => { 
+    const updateCharacter = () => { 
+        clearError();
         const id = Math.floor(Math.random() * (20 - 1) + 1);
-        this.onCharacterLoading();
-        this.marvelService.getCharacter(id)
-            .then(this.onCharacterLoaded)
-            .catch(this.onError)
+        getCharacter(id)
+            .then(onCharacterLoaded)
     }
 
-    render() { 
-        const { character, loading, error } = this.state;
         const errorMessage = error ? <ErrorMessage /> : null;
         const spinner = loading ? <Spinner /> : null;
         const content = !(loading || error) ? <View character={character} /> : null;
@@ -75,14 +51,13 @@ class RandomChar extends Component {
                     </p>
                     <button
                         className="button button__main"
-                        onClick={this.updateCharacter}>
+                        onClick={updateCharacter}>
                         <div className="inner">try it</div>
                     </button>
                     <img src={mjolnir} alt="mjolnir" className="randomchar__decoration"/>
                 </div>
             </div>
         )
-    }
 }
 
 const View = ({character}) => { 

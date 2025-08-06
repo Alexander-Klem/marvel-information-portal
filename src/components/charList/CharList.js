@@ -1,110 +1,111 @@
-import { Component } from 'react';
-import MarvelService from '../../services/MarvelService';
+import { useState, useEffect, useRef, createRef } from 'react';
+import { CSSTransition, TransitionGroup } from 'react-transition-group';
+import PropTypes from 'prop-types';
+import useMarvelService from '../../services/MarvelService';
 import Spinner from '../spinner/Spinner';
 import ErrorMessage from '../errorMessage/ErrorMessage';
 import './charList.scss';
 
-class CharList extends Component {
+const CharList = (props) => {
 
-    state = {
-        characters: [],
-        loading: true,
-        error: false,
-        newItemLoading: false,
-        offset: 7,
-        charactersEnded: false
+    const [characters, setCharacters] = useState([]);
+    const [newItemLoading, setNewItemLoading] = useState(false);
+    const [offset, setOffset] = useState(0);
+    const [charactersEnded, setCharactersEnded] = useState(false);
+
+    const {loading, error, getAllCharacters} =  useMarvelService();
+
+    useEffect(() => { 
+        onRequest(offset, true);
+    }, [])
+
+    const onRequest = (offset, initial) => { 
+        initial ? setNewItemLoading(false) : setNewItemLoading(true);
+        getAllCharacters(offset)
+            .then(onCharactersLoaded)
     }
 
-
-    marvelService = new MarvelService();
-
-    // componentWillUnmount() { 
-    //     this.onRequest();
-    // }
-
-    componentDidMount() { 
-        this.onRequest();
-    }
-
-    onRequest = (offset) => { 
-        this.onCharacterListLoading();
-        this.marvelService.getAllCharacters(offset)
-            .then(this.onCharactersLoaded)
-            .catch(this.onError)
-    }
-
-    onCharacterListLoading = () => { 
-        this.setState({
-            newItemLoading: true,
-        })
-    }
-
-    onCharactersLoaded = (newCharacters) => { 
-
+    const onCharactersLoaded = (newCharacters) => { 
         let ended = false;
         if (newCharacters.length < 3) { 
             ended = true;
         }
 
-        this.setState(({offset, characters}) => ({
-            characters: [...characters, ...newCharacters],
-            loading: false,
-            newItemLoading: false,
-            offset: offset + 3,
-            charactersEnded: ended
-        }))
+        setCharacters(characters => [...characters, ...newCharacters])
+        setNewItemLoading(false)
+        setOffset(offset => offset + 6)
+        setCharactersEnded(ended)
     }
 
-    onError = () => {
-        this.setState({
-            loading: false,
-            error: true
-        })
+    const focusFirstItem = (ref) => { 
+        ref.current.classList.add("char__item_selected");
+        ref.current.focus();
     }
 
-    renderCharacters = (arr) => { 
-        const items = arr.map(item => { 
+    const blurOnItem = (ref) => {
+        ref.current.classList.remove("char__item_selected");
+    };
+
+    const renderCharacters = (arr) => { 
+        const items = arr.map((item) => { 
+             const itemRef = createRef(null);
             return (
-                <li className="char__item"
-                    key={item.id}
-                    onClick={() => this.props.onCharacterSelected(item.id)}>
-                    <img src={item.thumbnail} alt={item.name} />
-                    <div className="char__name">{item.name}</div>
-                </li>
+                <CSSTransition
+                key={item.id}
+                in={true}
+                timeout={500}
+                classNames="char__item"
+                nodeRef={itemRef}
+                >
+                    <li className="char__item"
+                        ref={itemRef}
+                        tabIndex={0}
+                        key={item.id}
+                        onClick={() => {
+                            props.onCharacterSelected(item.id);
+                            focusFirstItem(itemRef)
+                        }}
+                        onBlur={() => blurOnItem(itemRef)}>
+                        <img src={item.thumbnail} alt={item.name} />
+                        <div className="char__name">{item.name}</div>
+                    </li>
+                </CSSTransition>
             );
         })
 
         return (
-            <ul className="char__grid">
-                {items}
-            </ul>
+            <TransitionGroup component={'ul'} className="char__grid">
+                    {items}
+            </TransitionGroup>
+            // Вместо 
+            // <ul className="comics__grid">
+            //     </TransitionGroup component={'null'}>{items}</TransitionGroup>
+            // </ul>
         );
     }
 
-    render() { 
-
-        const { characters, loading, error, offset, newItemLoading, charactersEnded } = this.state;
-        const items = this.renderCharacters(characters);
+        const items = renderCharacters(characters);
 
         const errorMessage = error ? <ErrorMessage /> : null;
-        const spinner = loading ? <Spinner /> : null;
-        const content = !(loading || error) ? items : null;
-
-      
+        const spinner = loading && !newItemLoading ? <Spinner /> : null;
+        
     return (
         <div className="char__list">
             {errorMessage}
             {spinner}
-            {content}
+            {items}
             <button className="button button__main button__long"
                     disabled={newItemLoading}
                     style={{'display': charactersEnded ? 'none' : 'block'}}
-                    onClick={() => this.onRequest(offset)}>
+                    onClick={() => onRequest(offset)}>
                 <div className="inner">load more</div>
             </button>
         </div>
     )
 }
+
+CharList.propTypes = {
+    onCharacterSelected: PropTypes.func
 }
 
 export default CharList;
